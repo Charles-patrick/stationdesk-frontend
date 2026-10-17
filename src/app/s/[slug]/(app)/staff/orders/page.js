@@ -52,19 +52,19 @@ export default function StaffOrders() {
         {!o ? <div className="center"><span className="spinner" /></div> : (
           <div className="stack">
             <div className="row between"><Badge tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge><span className="small muted">{s.dt(o.created_at)}</span></div>
-            <div><strong>{o.customer_name}</strong>{o.customer_company ? ` · ${o.customer_company}` : ''}<br /><span className="muted">{o.customer_phone} {o.customer_email}</span></div>
+            <div><strong>{o.customer_name}</strong><br /><span className="muted">{o.customer_phone} {o.customer_email}</span></div>
             <div className="tablewrap"><table className="table"><tbody>
               {o.items.map((i) => <tr key={i.id}><td>{i.name}</td><td className="num">{i.qty} × {s.money(i.unit_price)}</td><td className="num">{s.money(i.amount)}</td></tr>)}
               <tr><td colSpan={2}><strong>Total</strong></td><td className="num"><strong>{s.money(o.total)}</strong></td></tr>
             </tbody></table></div>
             <div>{o.fulfilment === 'delivery' ? <>Deliver to: <strong>{o.delivery_address}</strong></> : <strong>Customer will collect</strong>}{o.preferred_at ? ` · wants it ${s.dt(o.preferred_at)}` : ''}</div>
-            {o.vehicle && <div>Vehicle: {o.vehicle}</div>}
             {o.note && <div>Note: {o.note}</div>}
             <div className="row">
               <span>Payment: {o.payment_method === 'bank_transfer' ? 'Bank transfer' : 'Pay on pickup or delivery'} · </span>
               <Badge tone={o.payment_status === 'paid' ? 'good' : 'warn'}>{o.payment_status === 'paid' ? 'Paid' : 'Not paid'}</Badge>
               {o.status !== 'cancelled' && o.status !== 'completed' && <Button size="sm" variant="ghost" onClick={() => paid(o.payment_status === 'paid' ? 'unpaid' : 'paid')}>Mark as {o.payment_status === 'paid' ? 'unpaid' : 'paid'}</Button>}
               {o.proof_url && <a href={o.proof_url} target="_blank" rel="noreferrer">View transfer receipt</a>}
+              <a href={s.href(`/print/receipt/${o.tracking_token}`)} target="_blank" rel="noreferrer">Print receipt</a>
             </div>
             {o.status === 'ready' && <Banner tone="info">Completing the order takes the items out of stock and adds the sale to your open shift.</Banner>}
           </div>

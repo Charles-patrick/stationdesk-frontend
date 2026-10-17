@@ -6,14 +6,13 @@ import { api } from '@/lib/api';
 import { num } from '@/lib/format';
 import { Async, Banner, Button, Card, Empty, Field, PageHead, useAction, useToast } from '@/components/ui';
 
-const blank = { product_id: '', tank_id: '', qty: '', supplier_id: '', supplier_name: '', cost_price: '', waybill: '', dip_before: '', dip_after: '', note: '' };
+const blank = { product_id: '', tank_id: '', qty: '', supplier_name: '', cost_price: '', waybill: '', dip_before: '', dip_after: '', note: '' };
 
 export default function RestockPage() {
   const s = useStation();
   const toast = useToast();
   const products = useApi('/catalog/products?active=1');
   const forecourt = useApi('/forecourt');
-  const suppliers = useApi('/suppliers');
   const recent = useApi('/inventory/restocks');
   const [f, setF] = useState(blank);
   const [photo, setPhoto] = useState(null);
@@ -31,7 +30,7 @@ export default function RestockPage() {
     run(async () => {
       const row = await api.post('/inventory/restock', {
         product_id: Number(f.product_id), tank_id: metered ? Number(f.tank_id) || null : null, qty: Number(f.qty),
-        supplier_id: f.supplier_id ? Number(f.supplier_id) : null, supplier_name: f.supplier_name || null,
+        supplier_name: f.supplier_name || null,
         cost_price: numOrNull(f.cost_price), waybill: f.waybill || null,
         dip_before: metered ? numOrNull(f.dip_before) : null, dip_after: metered ? numOrNull(f.dip_after) : null, note: f.note || null,
       });
@@ -71,13 +70,7 @@ export default function RestockPage() {
             </div>
           )}
           <div className="form-grid">
-            <Field label="Supplier">
-              <select className="input" value={f.supplier_id} onChange={set('supplier_id')}>
-                <option value="">Other / not listed</option>
-                {(suppliers.data || []).filter((x) => x.active).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-              </select>
-            </Field>
-            {!f.supplier_id && <Field label="Supplier name"><input className="input" value={f.supplier_name} onChange={set('supplier_name')} /></Field>}
+            <Field label="Supplier"><input className="input" value={f.supplier_name} onChange={set('supplier_name')} /></Field>
             <Field label="Waybill or delivery number"><input className="input" value={f.waybill} onChange={set('waybill')} /></Field>
             {s.role === 'admin' && <Field label="Cost price per unit"><input className="input" inputMode="decimal" value={f.cost_price} onChange={(e) => setF({ ...f, cost_price: e.target.value.replace(/[^0-9.]/g, '') })} /></Field>}
           </div>

@@ -8,20 +8,24 @@ import { enqueue, getFailed, getQueue, clearFailed } from '@/lib/offline';
 import { uuid } from '@/lib/format';
 import { Async, Badge, Banner, Button, Card, Empty, Field, Modal, PageHead, Qty, useAction, useToast } from '@/components/ui';
 
-const PAY = [['cash', 'Cash'], ['transfer', 'Transfer'], ['pos', 'POS'], ['credit', 'Credit']];
+const PAY = [['cash', 'Cash'], ['transfer', 'Transfer'], ['pos', 'POS']];
 
 export default function SalesPage() {
+  const s = useStation();
+  if (s.role === 'admin') return <Empty title="Sales are recorded by attendants">Attendants record sales on their shifts. You can review and correct them under Shifts.</Empty>;
+  return <SalesPageInner />;
+}
+
+function SalesPageInner() {
   const s = useStation();
   const toast = useToast();
   const products = useApi('/catalog/products?active=1');
   const shift = useApi('/shifts/current');
-  const credit = useApi('/credit/customers');
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('All');
   const [sel, setSel] = useState(null);
   const [qty, setQty] = useState(1);
   const [pay, setPay] = useState('cash');
-  const [cust, setCust] = useState('');
   const [price, setPrice] = useState('');
   const [note, setNote] = useState('');
   const [voiding, setVoiding] = useState(null);
@@ -36,16 +40,14 @@ export default function SalesPage() {
   const failed = getFailed(s.slug);
   const hasShift = !!shift.data;
 
-  const open = (p) => { setSel(p); setQty(1); setPay('cash'); setCust(''); setPrice(''); setNote(''); };
+  const open = (p) => { setSel(p); setQty(1); setPay('cash');  setPrice(''); setNote(''); };
 
   const record = async () => {
     if (!sel) return;
     const payload = {
       product_id: sel.id, qty: Number(qty), payment: pay, client_id: uuid(), note: note || null,
-      credit_customer_id: pay === 'credit' ? Number(cust) || null : null,
       ...(sel.sale_type === 'service' && price ? { unit_price: Number(price) } : {}),
     };
-    if (pay === 'credit' && !payload.credit_customer_id) return toast.error('Choose the credit customer');
     try {
       await run(async () => {
         try { await api.post('/sales', payload); toast.ok('Sale recorded'); }
@@ -123,14 +125,6 @@ export default function SalesPage() {
             <Field label="Paid by">
               <div className="chips">{PAY.map(([k, l]) => <button key={k} type="button" className={`chip ${pay === k ? 'active' : ''}`} onClick={() => setPay(k)}>{l}</button>)}</div>
             </Field>
-            {pay === 'credit' && (
-              <Field label="Credit customer">
-                <select className="input" value={cust} onChange={(e) => setCust(e.target.value)}>
-                  <option value="">Choose a customer</option>
-                  {(credit.data || []).filter((c) => c.active).map((c) => <option key={c.id} value={c.id}>{c.name} (owes {s.money(c.balance)})</option>)}
-                </select>
-              </Field>
-            )}
             <Field label="Note (optional)"><input className="input" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
           </div>
         )}

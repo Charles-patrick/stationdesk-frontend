@@ -32,7 +32,7 @@ export function StationProvider({ slug, children }) {
     try {
       const s = await api.get(`/public/station/${slug}`);
       setStation(s);
-      setState('ready');
+      setState(s.paused ? 'paused' : 'ready');
     } catch (e) {
       setState(e.status === 404 ? 'missing' : 'error');
     }
@@ -67,19 +67,6 @@ export function StationProvider({ slug, children }) {
     return () => { unsub(); window.removeEventListener('online', run); clearInterval(t); };
   }, [slug, me?.user?.id]);
 
-  const login = useCallback(async (username, secret, usePin) => {
-    const res = await api.post('/auth/login', { slug, username, ...(usePin ? { pin: secret } : { password: secret }) });
-    setToken(res.token);
-    const data = await loadMe();
-    return data;
-  }, [slug, loadMe]);
-
-  const register = useCallback(async (form) => {
-    const res = await api.post('/auth/register', { slug, ...form });
-    if (res.token) { setToken(res.token); await loadMe(); }
-    return res;
-  }, [slug, loadMe]);
-
   const logout = useCallback(() => { setToken(null); setMe(null); }, []);
 
   const switchStation = useCallback(async (id) => {
@@ -91,14 +78,14 @@ export function StationProvider({ slug, children }) {
     const currency = station?.currency || 'NGN';
     const tz = me?.station?.timezone || 'Africa/Lagos';
     return {
-      slug, station, state, me, user: me?.user || null, role: me?.user?.role || null, meLoaded, loadMe, login, register, logout, switchStation,
+      slug, station, state, me, user: me?.user || null, role: me?.user?.role || null, meLoaded, loadMe, logout, switchStation,
       fullStation: me?.station || null, queueCount, failedCount,
       money: (n) => fmtMoney(n, currency), dt: (d) => fmtDateTime(d, tz), tm: (d) => fmtTime(d, tz), dd: (d) => fmtDate(d, tz),
       href: (p) => `/s/${slug}${p === '/' ? '' : p}`,
     };
-  }, [slug, station, state, me, meLoaded, loadMe, login, register, logout, switchStation, queueCount, failedCount]);
+  }, [slug, station, state, me, meLoaded, loadMe, logout, switchStation, queueCount, failedCount]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-export const homeFor = (role) => (role === 'admin' ? '/admin' : role === 'staff' ? '/staff/shift' : '/shop');
+export const homeFor = (role) => (role === 'admin' ? '/admin' : '/staff/shift');

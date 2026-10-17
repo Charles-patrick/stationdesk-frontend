@@ -37,8 +37,7 @@ export default function ShiftPrint() {
       <h3 style={{ margin: '14px 0 6px' }}>Cash</h3>
       <table className="table" style={{ minWidth: 0 }}><tbody>
         <tr><td>Pump sales</td><td className="num">{s.money(x.pump_sales)}</td></tr>
-        <tr><td>Other sales (not credit)</td><td className="num">{s.money(x.manual_sales)}</td></tr>
-        <tr><td>Credit payments received</td><td className="num">{s.money(x.credit_payments)}</td></tr>
+        <tr><td>Other sales</td><td className="num">{s.money(x.manual_sales)}</td></tr>
         <tr><td>Expenses from the till</td><td className="num">−{s.money(x.till_expenses)}</td></tr>
         <tr><td><strong>Expected</strong></td><td className="num"><strong>{s.money(x.expected_amount)}</strong></td></tr>
         <tr><td>Cash handed over</td><td className="num">{s.money(x.cash_declared)}</td></tr>

@@ -6,39 +6,29 @@ import { Icon, Loading, Modal, Button } from '@/components/ui';
 import { useStation, homeFor } from '@/lib/station';
 
 const NAV = {
-  customer: [
-    { group: null, items: [
-      { href: '/shop', label: 'Shop', icon: 'cart' }, { href: '/orders', label: 'My orders', icon: 'list' }, { href: '/account', label: 'Account', icon: 'user' },
-    ] },
-  ],
   staff: [
     { group: null, items: [
       { href: '/staff/shift', label: 'Shift', icon: 'clock' }, { href: '/staff/sales', label: 'Sales', icon: 'cart' },
       { href: '/staff/orders', label: 'Orders', icon: 'list' }, { href: '/staff/restock', label: 'Restock', icon: 'truck' },
       { href: '/staff/stock', label: 'Stock', icon: 'box' }, { href: '/staff/expenses', label: 'Expenses', icon: 'wallet' },
-      { href: '/staff/credit', label: 'Credit', icon: 'users' },
     ] },
   ],
   admin: [
     { group: null, items: [{ href: '/admin', label: 'Dashboard', icon: 'home' }] },
     { group: 'Daily work', items: [
-      { href: '/staff/shift', label: 'My shift', icon: 'clock' }, { href: '/staff/sales', label: 'Sales', icon: 'cart' },
       { href: '/staff/orders', label: 'Orders', icon: 'list' }, { href: '/staff/restock', label: 'Restock', icon: 'truck' },
       { href: '/staff/stock', label: 'Stock', icon: 'box' }, { href: '/staff/expenses', label: 'Expenses', icon: 'wallet' },
-      { href: '/staff/credit', label: 'Credit', icon: 'users' },
     ] },
     { group: 'Manage', items: [
       { href: '/admin/shifts', label: 'Shifts', icon: 'clock' }, { href: '/admin/approvals', label: 'Approvals', icon: 'check' },
       { href: '/admin/products', label: 'Products', icon: 'box' }, { href: '/admin/prices', label: 'Prices', icon: 'tag' },
-      { href: '/admin/forecourt', label: 'Tanks and pumps', icon: 'pump' }, { href: '/admin/suppliers', label: 'Suppliers', icon: 'truck' },
-      { href: '/admin/team', label: 'Team', icon: 'users' }, { href: '/admin/customers', label: 'Customers', icon: 'user' },
+      { href: '/admin/forecourt', label: 'Tanks and pumps', icon: 'pump' }, { href: '/admin/team', label: 'Team', icon: 'users' },
       { href: '/admin/reports', label: 'Reports', icon: 'chart' }, { href: '/admin/audit', label: 'Audit trail', icon: 'shield' },
-      { href: '/admin/settings', label: 'Settings', icon: 'gear' },
+      { href: '/admin/help', label: 'Help guides', icon: 'help' }, { href: '/admin/settings', label: 'Settings', icon: 'gear' },
     ] },
   ],
 };
 const BOTTOM = {
-  customer: ['/shop', '/orders', '/account'],
   staff: ['/staff/shift', '/staff/sales', '/staff/orders', '/staff/stock'],
   admin: ['/admin', '/admin/shifts', '/staff/orders', '/admin/reports'],
 };
@@ -47,8 +37,7 @@ const BOTTOM = {
 function allowed(role, path) {
   if (path.startsWith('/admin')) return role === 'admin';
   if (path.startsWith('/staff')) return role === 'admin' || role === 'staff';
-  if (path === '/shop' || path.startsWith('/orders') || path.startsWith('/account')) return role === 'customer';
-  return true;
+  return role === 'admin' || role === 'staff';
 }
 
 export default function AppShell({ children }) {
@@ -60,7 +49,7 @@ export default function AppShell({ children }) {
 
   useEffect(() => {
     if (!s.meLoaded) return;
-    if (!s.user) router.replace(s.href('/login'));
+    if (!s.user) router.replace('/login');
     else if (!allowed(s.role, rel)) router.replace(s.href(homeFor(s.role)));
   }, [s.meLoaded, s.user, s.role, rel]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -82,7 +71,8 @@ export default function AppShell({ children }) {
         <div className="spacer" />
         {s.queueCount > 0 && <Link href={s.href('/staff/sales')} className="queue" title="Entries saved on this phone, waiting for the network">{s.queueCount} waiting to send</Link>}
         {s.failedCount > 0 && <Link href={s.href('/staff/sales')} className="queue" style={{ background: 'var(--bad-bg)', color: 'var(--bad)' }}>{s.failedCount} need attention</Link>}
-        <Link href={s.href('/help')} className="icon-btn" aria-label="Help"><Icon name="help" /></Link>
+        {s.role === 'admin' && <a href={s.href('/')} target="_blank" rel="noreferrer" className="btn brand sm">View store</a>}
+        <Link href={s.href('/guide')} className="icon-btn" aria-label="Help"><Icon name="help" /></Link>
         <Link href={s.href('/notifications')} className="icon-btn" aria-label="Notifications">
           <Icon name="bell" />{(s.me?.unread || 0) > 0 && <span className="dot">{s.me.unread > 9 ? '9+' : s.me.unread}</span>}
         </Link>
@@ -102,7 +92,7 @@ export default function AppShell({ children }) {
           )}
           <div style={{ marginTop: 18, padding: '0 10px' }}>
             <div className="small muted" style={{ marginBottom: 6 }}>{s.user.name}</div>
-            <Button variant="ghost" size="sm" block onClick={() => { s.logout(); router.replace(s.href('/login')); }}>Log out</Button>
+            <Button variant="ghost" size="sm" block onClick={() => { s.logout(); router.replace('/login'); }}>Log out</Button>
           </div>
         </nav>
         <main className="main">{children}</main>
@@ -120,10 +110,10 @@ export default function AppShell({ children }) {
           ))}
           {s.role === 'admin' && stations.length > 1 && <Link href={s.href('/admin/overview')} className="navlink" onClick={() => setMore(false)}><Icon name="building" size={20} />All stations</Link>}
           <Link href={s.href('/notifications')} className="navlink" onClick={() => setMore(false)}><Icon name="bell" size={20} />Notifications</Link>
-          <Link href={s.href('/help')} className="navlink" onClick={() => setMore(false)}><Icon name="help" size={20} />Help</Link>
+          <Link href={s.href('/guide')} className="navlink" onClick={() => setMore(false)}><Icon name="help" size={20} />Help</Link>
           <hr className="sep" />
           <div className="small muted">Signed in as {s.user.name}</div>
-          <Button variant="ghost" onClick={() => { setMore(false); s.logout(); router.replace(s.href('/login')); }}>Log out</Button>
+          <Button variant="ghost" onClick={() => { setMore(false); s.logout(); router.replace('/login'); }}>Log out</Button>
         </div>
       </Modal>
     </div>

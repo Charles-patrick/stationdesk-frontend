@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 // ---------- icons ----------
 const PATHS = {
@@ -194,20 +194,68 @@ export function ProgressBar({ value, max, lowAt = 0.2, midAt = 0.4 }) {
   return <div className={`bar ${cls}`}><i style={{ width: `${pct * 100}%` }} /></div>;
 }
 
-// Simple bar chart drawn with SVG
-export function BarChart({ data, height = 150, format = (v) => v, color = 'var(--ink)' }) {
+// Bar chart with a labelled money axis, gridlines and a readout for the bar you touch or hover
+const niceMax = (v) => {
+  if (v <= 0) return 4;
+  const exp = 10 ** Math.floor(Math.log10(v));
+  const f = v / exp;
+  const step = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  return step * exp;
+};
+export const compact = (n, symbol = '₦') => {
+  const v = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (v >= 1e9) return `${sign}${symbol}${+(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${sign}${symbol}${+(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${sign}${symbol}${+(v / 1e3).toFixed(1)}k`;
+  return `${sign}${symbol}${+v.toFixed(0)}`;
+};
+export function BarChart({ data, height = 260, format = (v) => v, yFormat = compact, color = 'var(--ink)', xTitle = 'Date', yTitle = 'Amount' }) {
+  const ref = useRef(null);
+  const [w, setW] = useState(560);
+  const [active, setActive] = useState(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver((e) => setW(Math.max(260, Math.floor(e[0].contentRect.width))));
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
   if (!data?.length) return <div className="muted small">No data yet.</div>;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const w = 100 / data.length;
+  const left = 58, right = 10, top = 10, bottom = 44;
+  const pw = w - left - right, ph = height - top - bottom;
+  const max = niceMax(Math.max(...data.map((d) => d.value), 0));
+  const ticks = [0, 1, 2, 3, 4].map((i) => (max / 4) * i);
+  const slot = pw / data.length;
+  const bw = Math.min(slot * 0.7, 46);
+  const every = Math.max(1, Math.ceil(data.length / Math.max(2, Math.floor(pw / 62))));
+  const y = (v) => top + ph - (v / max) * ph;
+  const sel = active !== null ? data[active] : null;
   return (
-    <div>
-      <svg viewBox={`0 0 100 ${height / 3}`} preserveAspectRatio="none" style={{ width: '100%', height }} role="img" aria-label="Bar chart">
+    <div ref={ref} style={{ width: '100%' }}>
+      <div className="small" style={{ minHeight: 22, marginBottom: 4, fontWeight: 650 }}>
+        {sel ? `${sel.label}: ${format(sel.value)}` : <span className="muted" style={{ fontWeight: 400 }}>Tap or hover a bar to see the amount</span>}
+      </div>
+      <svg width={w} height={height} role="img" aria-label={`${yTitle} by ${xTitle.toLowerCase()}`} style={{ display: 'block', maxWidth: '100%' }}>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={left} x2={w - right} y1={y(t)} y2={y(t)} stroke={t === 0 ? '#9aa7a1' : '#e1e6e3'} strokeWidth="1" />
+            <text x={left - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#667782">{yFormat(t)}</text>
+          </g>
+        ))}
         {data.map((d, i) => {
-          const h = (d.value / max) * (height / 3 - 4);
-          return <rect key={i} x={i * w + w * 0.15} y={height / 3 - h} width={w * 0.7} height={Math.max(h, d.value > 0 ? 0.6 : 0)} fill={color} rx="0.6"><title>{`${d.label}: ${format(d.value)}`}</title></rect>;
+          const h = Math.max((d.value / max) * ph, d.value > 0 ? 2 : 0);
+          const x = left + i * slot + (slot - bw) / 2;
+          return (
+            <g key={i} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)} onClick={() => setActive(i)} style={{ cursor: 'pointer' }}>
+              <rect x={left + i * slot} y={top} width={slot} height={ph} fill="transparent" />
+              <rect x={x} y={top + ph - h} width={bw} height={h} rx="3" fill={active === i ? 'var(--brand)' : color} />
+              {i % every === 0 && <text x={x + bw / 2} y={top + ph + 16} textAnchor="middle" fontSize="11" fill="#667782">{d.label}</text>}
+            </g>
+          );
         })}
+        <text x={left + pw / 2} y={height - 6} textAnchor="middle" fontSize="11" fill="#667782">{xTitle}</text>
+        <text x={12} y={top + ph / 2} textAnchor="middle" fontSize="11" fill="#667782" transform={`rotate(-90 12 ${top + ph / 2})`}>{yTitle}</text>
       </svg>
-      <div className="row between small muted" style={{ marginTop: 4 }}><span>{data[0].label}</span><span>{data[data.length - 1].label}</span></div>
     </div>
   );
 }

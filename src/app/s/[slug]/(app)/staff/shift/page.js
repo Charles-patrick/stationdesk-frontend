@@ -9,6 +9,12 @@ import { Async, Badge, Banner, Button, Card, Check, Empty, Field, Lcd, LcdInput,
 
 export default function ShiftPage() {
   const s = useStation();
+  if (s.role === 'admin') return <Empty title="Admins do not work shifts">Shifts are for attendants. You can review every shift under Shifts.</Empty>;
+  return <ShiftPageInner />;
+}
+
+function ShiftPageInner() {
+  const s = useStation();
   const cur = useApi('/shifts/current');
   const [result, setResult] = useState(null);
   const history = useApi('/shifts?status=closed');
@@ -31,7 +37,7 @@ export default function ShiftPage() {
               <tbody>{list.slice(0, 12).map((x) => (
                 <tr key={x.id}>
                   <td>{s.dt(x.started_at)}</td><td>{s.dt(x.closed_at)}</td>
-                  <td className="num">{s.money(Number(x.pump_sales) + Number(x.manual_sales) + Number(x.credit_sales))}</td>
+                  <td className="num">{s.money(Number(x.pump_sales) + Number(x.manual_sales))}</td>
                   <td>{x.flags?.length ? <Badge tone="warn">Flagged</Badge> : <Badge tone="good">Balanced</Badge>}{x.admin_closed && <> <Badge>Closed by admin</Badge></>}</td>
                   <td className="right"><Link className="btn ghost sm" href={s.href(`/print/shift/${x.id}`)} target="_blank">Sheet</Link></td>
                 </tr>

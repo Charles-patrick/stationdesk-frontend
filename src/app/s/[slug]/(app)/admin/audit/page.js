@@ -18,7 +18,7 @@ export default function AuditPage() {
         <input className="input" style={{ maxWidth: 280 }} placeholder="Search person or action" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search" />
         <select className="input" style={{ maxWidth: 220 }} value={entity} onChange={(e) => setEntity(e.target.value)} aria-label="Type">
           <option value="">Everything</option>
-          {['sale', 'shift', 'product', 'restock', 'order', 'user', 'tank', 'pump', 'station', 'edit_request', 'purchase_order', 'credit_customer', 'expense'].map((e) => <option key={e} value={e}>{e.replace('_', ' ')}</option>)}
+          {['sale', 'shift', 'product', 'restock', 'order', 'user', 'tank', 'pump', 'station', 'edit_request', 'expense', 'help'].map((e) => <option key={e} value={e}>{e.replace('_', ' ')}</option>)}
         </select>
       </div>
       <Async state={log} empty={<Empty title="Nothing found" />}>

@@ -33,11 +33,10 @@ export default function Dashboard() {
               <Stat label="Open shifts" value={x.open_shifts} sub={x.open_shift_list.map((o) => o.user_name).join(', ') || 'None right now'} />
               <Stat label="Low stock items" value={x.low_stock} tone={x.low_stock ? 'warn' : ''} />
               <Stat label="Flagged shifts (7 days)" value={x.flagged_shifts} tone={x.flagged_shifts ? 'bad' : ''} />
-              <Stat label="Owed by credit customers" value={s.money(x.credit_owed)} />
               <Stat label="Waiting orders" value={x.pending_orders} />
             </div>
             <div className="grid c2">
-              <Card title="Sales, last 14 days"><BarChart data={x.trend.map((t) => ({ label: t.date.slice(5), value: Number(t.revenue) }))} format={s.money} color="var(--ink)" /></Card>
+              <Card title="Sales, last 14 days"><BarChart data={x.trend.map((t) => ({ label: t.date.slice(5), value: Number(t.revenue) }))} format={s.money} yTitle="Sales (₦)" xTitle="Date (month-day)" /></Card>
               <Card title="Best sellers today">
                 {x.top_today.length === 0 ? <p className="muted">No sales yet today.</p> : (
                   <div className="stack" style={{ gap: 8 }}>{x.top_today.map((p) => <div key={p.name} className="row between"><span>{p.name}</span><strong>{s.money(p.amount)}</strong></div>)}</div>
@@ -52,7 +51,7 @@ export default function Dashboard() {
                   ))}</div>
                 )}
               </Card>
-              <Card title="Low stock" actions={<Link href={s.href('/admin/suppliers')} className="small">Reorder</Link>}>
+              <Card title="Low stock" actions={<Link href={s.href('/admin/reports')} className="small">What to reorder</Link>}>
                 {x.low_stock_list.length === 0 ? <p className="muted">Everything is above its reorder level.</p> : (
                   <div className="stack" style={{ gap: 8 }}>{x.low_stock_list.map((p) => <div key={p.id} className="row between"><span>{p.name}{p.variant ? ` ${p.variant}` : ''}</span><Badge tone="warn">{num(p.stock_qty)} {p.unit} left</Badge></div>)}</div>
                 )}

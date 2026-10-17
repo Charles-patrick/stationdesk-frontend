@@ -7,17 +7,20 @@ import { Button, Loading } from '@/components/ui';
 
 export default function ReceiptPrint() {
   const { id } = useParams();
+  const key = String(id);
+  const isPublicToken = !/^\d+$/.test(key);
   const s = useStation();
   const router = useRouter();
-  useEffect(() => { if (s.meLoaded && !s.user) router.replace(s.href('/login')); }, [s.meLoaded, s.user]); // eslint-disable-line
-  const order = useApi(`/orders/${id}`, { skip: !s.user });
+  useEffect(() => { if (!isPublicToken && s.meLoaded && !s.user) router.replace(s.href('/login')); }, [isPublicToken, s.meLoaded, s.user]); // eslint-disable-line
+  const order = useApi(isPublicToken ? `/public/orders/${key}` : `/orders/${key}`, { skip: !isPublicToken && !s.user });
   const o = order.data;
   if (!o) return <Loading />;
+  const station = o.station || s.station;
   return (
     <div className="printpage">
       <div className="noprint row" style={{ marginBottom: 16 }}><Button variant="brand" onClick={() => window.print()}>Print or save as PDF</Button></div>
-      <h1>{s.station?.name}</h1>
-      <p className="muted">{[s.station?.address, s.station?.phone].filter(Boolean).join(' · ')}</p>
+      <h1>{station?.name}</h1>
+      <p className="muted">{[station?.address, station?.phone].filter(Boolean).join(' · ')}</p>
       <hr className="sep" />
       <h2>Receipt for order #{o.id}</h2>
       <p>{s.dt(o.created_at)}<br />Customer: {o.customer_name}{o.customer_company ? `, ${o.customer_company}` : ''}</p>

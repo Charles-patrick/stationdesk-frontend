@@ -40,45 +40,60 @@ export default function PlatformPage() {
 }
 
 function Stations() {
-  const toast = useToast();
   const overview = useApi('/platform/overview');
   const list = useApi('/platform/stations');
   const [modal, setModal] = useState(null);
+  const [logo, setLogo] = useState(null);
   const [team, setTeam] = useState(null);
   const teamData = useApi(team ? `/platform/stations/${team.id}/team` : null, { skip: !team });
   const [pw, setPw] = useState({ user_id: '', password: '' });
   const [run, busy] = useAction();
+  const toast = useToast();
   const d = modal || {};
   const set = (k, v) => setModal((m) => ({ ...m, [k]: v }));
+  const reload = () => Promise.all([list.reload(), overview.reload()]);
+
+  // Check for new sign-ups every minute
+  useEffect(() => { const t = setInterval(reload, 60000); return () => clearInterval(t); }, []); // eslint-disable-line
 
   const create = () => run(async () => {
-    await api.post('/platform/stations', { name: d.name, slug: d.slug, template: d.template, brand_color: d.brand_color, address: d.address || null, phone: d.phone || null,
-      admin_name: d.admin_name, admin_username: d.admin_username, admin_password: d.admin_password, admin_email: d.admin_email || null });
-    setModal(null); await Promise.all([list.reload(), overview.reload()]);
+    const r = await api.post('/platform/stations', { name: d.name, slug: d.slug, template: d.template, brand_color: d.brand_color, address: d.address || null, phone: d.phone || null,
+      admin_name: d.admin_name, admin_username: d.admin_username, admin_password: d.admin_password, admin_email: d.admin_email });
+    if (logo) await api.upload(`/platform/stations/${r.station.id}/logo`, logo).catch(() => toast.error('Station created, but the logo did not upload. Add it from the station Settings.'));
+    setModal(null); setLogo(null); await reload();
   }, 'Station created');
-  const toggle = (st) => run(async () => { await api.patch(`/platform/stations/${st.id}`, { active: !st.active }); await list.reload(); });
+  const act = (st, what, msg) => run(async () => { await api.post(`/platform/stations/${st.id}/${what}`); await reload(); }, msg);
+  const pause = async (st) => { if (await toast.confirm({ title: `Pause ${st.name}?`, message: 'Nobody at this station can log in, and its customer store closes, until you resume it. No data is lost.', confirm: 'Pause station', danger: true })) act(st, 'pause', 'Station paused'); };
   const reset = () => run(async () => { await api.post(`/platform/stations/${team.id}/reset-password`, { user_id: Number(pw.user_id), password: pw.password }); setPw({ user_id: '', password: '' }); }, 'Password reset');
+  const status = (st) => (st.pending ? <Badge tone="warn">Waiting for approval</Badge> : st.active ? <Badge tone="good">Active</Badge> : <Badge tone="bad">Paused</Badge>);
 
   return (
     <div className="stack">
       {overview.data && (
         <div className="grid c4">
-          <Stat label="Stations" value={overview.data.stations.total} sub={`${overview.data.stations.active} active`} />
-          <Stat label="Staff" value={overview.data.users.staff} />
-          <Stat label="Customers" value={overview.data.users.customers} />
+          <Stat label="Stations" value={overview.data.stations.total} sub={`${overview.data.stations.active} active, ${overview.data.stations.paused} paused`} />
+          <Stat label="Waiting for approval" value={overview.data.stations.pending} tone={overview.data.stations.pending ? 'warn' : ''} />
+          <Stat label="Attendants" value={overview.data.users.staff} />
           <Stat label="Open shifts now" value={overview.data.open_shifts} />
         </div>
       )}
-      <div><Button variant="brand" onClick={() => setModal({ name: '', slug: '', template: 'full', brand_color: '#F2A900', admin_name: '', admin_username: 'admin', admin_password: '' })}>Add a station</Button></div>
+      <div><Button variant="brand" onClick={() => setModal({ name: '', slug: '', template: 'full', brand_color: '#F2A900', admin_name: '', admin_username: 'admin', admin_password: '', admin_email: '' })}>Add a station</Button></div>
       <Async state={list} empty={<Empty title="No stations yet" />}>
         {(rows) => (
           <div className="tablewrap"><table className="table">
-            <thead><tr><th>Station</th><th>Code</th><th className="num">Team</th><th className="num">Customers</th><th className="num">Products</th><th>Last sale</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th>Station</th><th>Owner</th><th>Code</th><th className="num">Team</th><th className="num">Products</th><th className="num">Orders</th><th>Last sale</th><th>Status</th><th /></tr></thead>
             <tbody>{rows.map((st) => (
-              <tr key={st.id}>
-                <td><strong>{st.name}</strong></td><td><Link href={`/s/${st.slug}`}>{st.slug}</Link></td><td className="num">{st.team}</td><td className="num">{st.customers}</td><td className="num">{st.products}</td>
-                <td>{st.last_sale ? dateOnly(st.last_sale) : 'None yet'}</td><td><Badge tone={st.active ? 'good' : 'bad'}>{st.active ? 'Active' : 'Off'}</Badge></td>
-                <td className="right nowrap"><Button size="sm" variant="ghost" onClick={() => setTeam(st)}>Team</Button>{' '}<Button size="sm" variant="ghost" onClick={() => toggle(st)}>{st.active ? 'Turn off' : 'Turn on'}</Button></td>
+              <tr key={st.id} style={st.pending ? { background: 'var(--warn-bg)' } : undefined}>
+                <td><strong>{st.name}</strong><br /><span className="small muted">{dateOnly(st.created_at)}</span></td><td className="small">{st.owner}</td>
+                <td>{st.pending ? st.slug : <Link href={`/s/${st.slug}`} target="_blank">{st.slug}</Link>}</td>
+                <td className="num">{st.team}</td><td className="num">{st.products}</td><td className="num">{st.orders}</td>
+                <td>{st.last_sale ? dateOnly(st.last_sale) : 'None yet'}</td><td>{status(st)}</td>
+                <td className="right nowrap">
+                  {st.pending && <Button size="sm" variant="brand" loading={busy} onClick={() => act(st, 'approve', 'Station approved')}>Approve</Button>}
+                  {!st.pending && st.active && <Button size="sm" variant="ghost" onClick={() => pause(st)}>Pause</Button>}
+                  {!st.pending && !st.active && <Button size="sm" variant="brand" onClick={() => act(st, 'resume', 'Station resumed')}>Resume</Button>}{' '}
+                  <Button size="sm" variant="ghost" onClick={() => setTeam(st)}>Team</Button>
+                </td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -86,25 +101,26 @@ function Stations() {
       </Async>
 
       <Modal open={!!modal} onClose={() => setModal(null)} title="Add a station" wide
-        footer={<><Button variant="ghost" onClick={() => setModal(null)}>Cancel</Button><Button variant="brand" loading={busy} disabled={!d.name || !d.slug || !d.admin_name || !d.admin_username || (d.admin_password || '').length < 6} onClick={create}>Create station</Button></>}>
+        footer={<><Button variant="ghost" onClick={() => setModal(null)}>Cancel</Button><Button variant="brand" loading={busy} disabled={!d.name || !d.slug || !d.admin_name || !d.admin_username || !d.admin_email || (d.admin_password || '').length < 6} onClick={create}>Create station</Button></>}>
         {modal && (
           <div className="stack">
             <div className="form-grid">
               <Field label="Station name"><input className="input" value={d.name} onChange={(e) => { set('name', e.target.value); if (!d._slugTouched) set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)); }} /></Field>
-              <Field label="Station code" hint="Used in the web address, for example /s/this-code."><input className="input" value={d.slug} onChange={(e) => { setModal({ ...d, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''), _slugTouched: true }); }} /></Field>
+              <Field label="Station code" hint="Used in the store address, and by attendants to log in."><input className="input" value={d.slug} onChange={(e) => setModal({ ...d, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''), _slugTouched: true })} /></Field>
               <Field label="What does it sell?"><select className="input" value={d.template} onChange={(e) => set('template', e.target.value)}>{TEMPLATES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
               <Field label="Brand colour"><input type="color" value={d.brand_color} onChange={(e) => set('brand_color', e.target.value)} style={{ width: 52, height: 44 }} /></Field>
               <Field label="Address"><input className="input" value={d.address || ''} onChange={(e) => set('address', e.target.value)} /></Field>
               <Field label="Phone"><input className="input" value={d.phone || ''} onChange={(e) => set('phone', e.target.value)} /></Field>
             </div>
+            <Field label="Logo (optional)" hint="The station admin can change it later in Settings."><input type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] || null)} /></Field>
             <h3>Station admin</h3>
             <div className="form-grid">
               <Field label="Name"><input className="input" value={d.admin_name} onChange={(e) => set('admin_name', e.target.value)} /></Field>
+              <Field label="Email" hint="They log in with this."><input className="input" type="email" value={d.admin_email} onChange={(e) => set('admin_email', e.target.value)} /></Field>
               <Field label="Username"><input className="input" value={d.admin_username} onChange={(e) => set('admin_username', e.target.value.toLowerCase())} /></Field>
               <Field label="Password" hint="At least 6 characters. They can change it later."><input className="input" value={d.admin_password} onChange={(e) => set('admin_password', e.target.value)} /></Field>
-              <Field label="Email (for summaries)"><input className="input" value={d.admin_email || ''} onChange={(e) => set('admin_email', e.target.value)} /></Field>
             </div>
-            <Banner tone="info">The admin sets up tanks, pumps, prices and products themselves from the setup wizard, or you can do it for them by logging in as them.</Banner>
+            <Banner tone="info">Stations you add yourself start active straight away. Stations that sign up on their own wait for your approval.</Banner>
           </div>
         )}
       </Modal>
@@ -113,7 +129,7 @@ function Stations() {
         <Async state={teamData}>
           {(rows) => (
             <div className="stack">
-              {rows.map((u) => <div key={u.id} className="row between"><span>{u.name} <span className="muted small">{u.username} · {u.role}</span></span><Badge tone={u.status === 'active' ? 'good' : 'bad'}>{u.status}</Badge></div>)}
+              {rows.map((u) => <div key={u.id} className="row between"><span>{u.name} <span className="muted small">{u.email || u.username} · {u.role}</span></span><Badge tone={u.status === 'active' ? 'good' : 'bad'}>{u.status}</Badge></div>)}
               <hr className="sep" />
               <h4>Reset a password</h4>
               <Field label="Person"><select className="input" value={pw.user_id} onChange={(e) => setPw({ ...pw, user_id: e.target.value })}><option value="">Choose</option>{rows.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>

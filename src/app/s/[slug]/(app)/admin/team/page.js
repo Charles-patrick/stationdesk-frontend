@@ -36,7 +36,7 @@ export default function TeamPage() {
             <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Last login</th><th>Status</th><th /></tr></thead>
             <tbody>{list.map((u) => (
               <tr key={u.id}>
-                <td>{u.name}{u.open_shift_id && <> <Badge tone="info">On shift</Badge></>}</td><td>{u.username}</td><td>{u.role === 'admin' ? 'Admin' : 'Staff'}</td>
+                <td>{u.name}{u.role === 'admin' && u.email ? <span className="muted small"> {u.email}</span> : null}{u.open_shift_id && <> <Badge tone="info">On shift</Badge></>}</td><td>{u.username}</td><td>{u.role === 'admin' ? 'Admin' : 'Staff'}</td>
                 <td>{u.last_login ? s.dt(u.last_login) : 'Never'}</td>
                 <td><Badge tone={u.status === 'active' ? 'good' : 'bad'}>{u.status === 'active' ? 'Active' : 'Off'}</Badge></td>
                 <td className="right nowrap">
@@ -55,10 +55,10 @@ export default function TeamPage() {
           <div className="form-grid">
             <Field label="Full name"><input className="input" value={d.name} onChange={(e) => set('name', e.target.value)} /></Field>
             <Field label="Username" hint="Lowercase, no spaces."><input className="input" value={d.username} onChange={(e) => set('username', e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))} /></Field>
-            <Field label="Role"><select className="input" value={d.role} onChange={(e) => set('role', e.target.value)}><option value="staff">Staff (attendant)</option><option value="admin">Admin</option></select></Field>
+            <Field label="Role" hint="Admins log in with their email and do not work shifts."><select className="input" value={d.role} onChange={(e) => set('role', e.target.value)}><option value="staff">Staff (attendant)</option><option value="admin">Admin</option></select></Field>
             <Field label="Password" hint="At least 6 characters."><input className="input" type="text" value={d.password} onChange={(e) => set('password', e.target.value)} /></Field>
             {d.role === 'staff' && <Field label="Quick PIN (optional)" hint="4 to 6 digits, for shared tablets."><input className="input" inputMode="numeric" value={d.pin} onChange={(e) => set('pin', e.target.value.replace(/\D/g, '').slice(0, 6))} /></Field>}
-            <Field label="Email (optional)"><input className="input" value={d.email} onChange={(e) => set('email', e.target.value)} /></Field>
+            <Field label={d.role === 'admin' ? 'Email (they log in with this)' : 'Email (optional)'}><input className="input" type="email" value={d.email} onChange={(e) => set('email', e.target.value)} /></Field>
             <Field label="Phone (optional)"><input className="input" value={d.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
           </div>
         )}

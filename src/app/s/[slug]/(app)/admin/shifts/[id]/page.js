@@ -54,9 +54,8 @@ export default function ShiftDetail() {
             {!pending && (
               <div className="grid c4 mt mb">
                 <Stat label="Pump sales" value={s.money(x.pump_sales)} />
-                <Stat label="Other sales (not credit)" value={s.money(x.manual_sales)} />
-                <Stat label="Credit sales" value={s.money(x.credit_sales)} />
-                <Stat label="Expected" value={s.money(x.expected_amount)} sub={`Credit payments ${s.money(x.credit_payments)}, till expenses ${s.money(x.till_expenses)}`} />
+                <Stat label="Other sales" value={s.money(x.manual_sales)} />
+                <Stat label="Expected" value={s.money(x.expected_amount)} sub={`Till expenses ${s.money(x.till_expenses)} taken off`} />
                 <Stat label="Cash" value={s.money(x.cash_declared)} />
                 <Stat label="Transfers" value={s.money(x.transfer_declared)} />
                 <Stat label="POS" value={s.money(x.pos_declared)} />

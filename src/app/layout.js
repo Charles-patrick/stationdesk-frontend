@@ -7,7 +7,7 @@ export const metadata = {
   title: { default: APP, template: `%s | ${APP}` },
   description: 'Daily sales, stock and ordering for fuel stations',
   manifest: '/manifest.json',
-  icons: { icon: '/icon.svg' },
+  icons: { icon: '/logo-mark.svg' },
 };
 export const viewport = { width: 'device-width', initialScale: 1, themeColor: '#12202a' };
 

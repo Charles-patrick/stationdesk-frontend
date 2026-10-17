@@ -16,10 +16,10 @@ export default function SettingsPage() {
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
 
   const save = () => run(async () => {
-    const keys = ['name', 'brand_color', 'address', 'phone', 'email', 'ordering_enabled', 'public_prices', 'signup_open', 'customer_approval', 'delivery_enabled', 'delivery_note',
-      'shift_alert_hours', 'cash_tolerance_pct', 'litre_tolerance_pct', 'summary_enabled', 'summary_hour', 'summary_email', 'loyalty_enabled', 'loyalty_points_per_1000', 'timezone'];
+    const keys = ['name', 'brand_color', 'address', 'phone', 'email', 'ordering_enabled', 'delivery_enabled', 'delivery_note',
+      'shift_alert_hours', 'cash_tolerance_pct', 'litre_tolerance_pct', 'summary_enabled', 'summary_hour', 'summary_email', 'timezone'];
     const body = Object.fromEntries(keys.map((k) => [k, f[k] === '' ? null : f[k]]));
-    ['shift_alert_hours', 'cash_tolerance_pct', 'litre_tolerance_pct', 'summary_hour', 'loyalty_points_per_1000'].forEach((k) => { body[k] = Number(body[k]); });
+    ['shift_alert_hours', 'cash_tolerance_pct', 'litre_tolerance_pct', 'summary_hour'].forEach((k) => { body[k] = Number(body[k]); });
     await api.patch('/station', body);
     await Promise.all([s.loadMe()]);
     window.location.reload();
@@ -42,18 +42,16 @@ export default function SettingsPage() {
             <Field label="Email"><input className="input" value={f.email || ''} onChange={(e) => set('email', e.target.value)} /></Field>
             <Field label="Time zone" hint="Used for daily summaries and monthly recaps."><input className="input" value={f.timezone} onChange={(e) => set('timezone', e.target.value)} /></Field>
           </div>
-          <Banner tone="info" title="Your ordering page:">{link}</Banner>
+          <div className="stack mt">
+            <Banner tone="info" title="Your customer store:">{link} (also opens with the View store button)</Banner>
+            <Banner tone="info" title="Your station code:">{s.slug}. Attendants use it on the Login page, on the Staff tab, the first time they log in on a device.</Banner>
+          </div>
         </Card>
         <Card title="Online ordering">
           <div className="stack">
-            <Check title="Let customers order online" desc="Turn this off if you only want to use the sales and stock side. Customers will not see a shop." checked={!!f.ordering_enabled} onChange={(e) => set('ordering_enabled', e.target.checked)} />
-            <Check title="Show prices to everyone" desc="When off, prices appear only after a customer logs in." checked={!!f.public_prices} onChange={(e) => set('public_prices', e.target.checked)} />
-            <Check title="Anyone can create an account" desc="Turn off if you want to create customer accounts yourself." checked={!!f.signup_open} onChange={(e) => set('signup_open', e.target.checked)} />
-            <Check title="Approve new customers first" desc="New accounts wait until you approve them under Customers." checked={!!f.customer_approval} onChange={(e) => set('customer_approval', e.target.checked)} />
+            <Check title="Let customers order online" desc="Customers order from your store without an account. Turn this off if you only want to use the sales and stock side." checked={!!f.ordering_enabled} onChange={(e) => set('ordering_enabled', e.target.checked)} />
             <Check title="We deliver" checked={!!f.delivery_enabled} onChange={(e) => set('delivery_enabled', e.target.checked)} />
             {f.delivery_enabled && <Field label="Delivery note shown to customers"><input className="input" value={f.delivery_note || ''} onChange={(e) => set('delivery_note', e.target.value)} placeholder="Delivery within the city only, fee agreed on confirmation" /></Field>}
-            <Check title="Loyalty points" desc="Customers earn points on completed orders." checked={!!f.loyalty_enabled} onChange={(e) => set('loyalty_enabled', e.target.checked)} />
-            {f.loyalty_enabled && <Field label="Points for every 1,000 spent"><input className="input" style={{ maxWidth: 160 }} inputMode="numeric" value={f.loyalty_points_per_1000} onChange={(e) => set('loyalty_points_per_1000', e.target.value.replace(/\D/g, ''))} /></Field>}
           </div>
         </Card>
         <Card title="Checks and alerts">
